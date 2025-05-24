@@ -47,7 +47,7 @@ func (c *EnvDBConfig) GetDatabase() string {
 }
 
 func ConnectDB(dbConfig EnvDBConfig) (*gorm.DB, error) {
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", dbConfig.GetUsername(), dbConfig.GetPassword(), dbConfig.GetPort(), dbConfig.GetPassword(), dbConfig.GetDatabase())
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", dbConfig.GetUsername(), dbConfig.GetPassword(), dbConfig.GetHost(), dbConfig.GetPort(), dbConfig.GetDatabase())
 	db, err := gorm.Open(postgres.Open(connStr), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)

@@ -3,6 +3,7 @@ package user
 import (
 	"net/http"
 
+	"github.com/BekzhanK1/wishly/config"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,6 +13,24 @@ type Handler struct {
 
 func NewHandler(service Service) *Handler {
 	return &Handler{service}
+}
+
+func (h *Handler) ProfileHandler(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	uid := userID.(uint)
+	userResponse, err := h.service.Me(uid)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": userResponse})
+
 }
 
 func (h *Handler) Register(c *gin.Context) {
@@ -37,12 +56,31 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := h.service.ValidateCredentials(input)
+	loginOutput, err := h.service.ValidateCredentials(input)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
-	// TODO: Generate JWT tokens
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "access_token",
+		Value:    loginOutput.AccessToken,
+		MaxAge:   config.AccessTokenExpiryTime,
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    loginOutput.RefreshToken,
+		MaxAge:   config.RefreshTokenExpiryTime,
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/auth/refresh",
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	c.JSON(http.StatusOK, gin.H{"user": loginOutput.UserResponse})
 }
