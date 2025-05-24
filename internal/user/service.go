@@ -48,6 +48,10 @@ func (s *service) Register(input RegisterInput) (*UserResponse, error) {
 	}
 
 	err = s.repo.Create(user)
+	if err != nil {
+		return nil, err
+	}
+
 	return toUserResponse(user), err
 
 }
