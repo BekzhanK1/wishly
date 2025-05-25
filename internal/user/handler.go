@@ -16,14 +16,8 @@ func NewHandler(service Service) *Handler {
 }
 
 func (h *Handler) ProfileHandler(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
-
-	uid := userID.(uint)
-	userResponse, err := h.service.Me(uid)
+	userID := c.MustGet("user_id").(uint)
+	userResponse, err := h.service.Me(userID)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return

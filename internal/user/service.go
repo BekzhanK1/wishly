@@ -52,7 +52,7 @@ func (s *service) Register(input RegisterInput) (*UserResponse, error) {
 		return nil, err
 	}
 
-	return toUserResponse(user), err
+	return ToUserResponse(user), err
 
 }
 
@@ -62,14 +62,14 @@ func (s *service) Me(userID uint) (*UserResponse, error) {
 		return nil, err
 	}
 
-	return toUserResponse(user), nil
+	return ToUserResponse(user), nil
 }
 
 func NewService(repo Repository) Service {
 	return &service{repo}
 }
 
-func toUserResponse(u *User) *UserResponse {
+func ToUserResponse(u *User) *UserResponse {
 	return &UserResponse{
 		ID:       u.ID,
 		Username: u.Username,
