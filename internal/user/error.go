@@ -13,4 +13,5 @@ var (
 	ErrInvalidEmailFormat  = errors.New("invalid email format")
 	ErrUserNotAuthorized   = errors.New("user not authorized")
 	ErrCouldntCreateUser   = errors.New("could not create user")
+	ErrInvalidRefreshToken = errors.New("invalid refresh token")
 )

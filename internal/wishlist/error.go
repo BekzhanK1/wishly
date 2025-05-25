@@ -2,15 +2,6 @@ package wishlist
 
 import "errors"
 
-type WishlistError struct {
-	Code    string
-	Message string
-}
-
-func (e WishlistError) Error() string {
-	return e.Message
-}
-
 var (
 	ErrInvalidWishlistInput         = errors.New("invalid wishlist input")
 	ErrWishlistNotFound             = errors.New("wishlist not found")

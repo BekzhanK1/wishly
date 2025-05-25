@@ -10,6 +10,7 @@ func RegisterRoutes(rg *gin.RouterGroup, h *Handler) {
 
 	users.POST("/register", h.Register)
 	users.POST("/login", h.Login)
+	users.POST("/refresh", h.RefreshAccessTokenHandler)
 
 	usersAuth := users.Group("/")
 	usersAuth.Use(auth.JWTMiddleware())

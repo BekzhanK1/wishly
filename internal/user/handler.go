@@ -1,9 +1,11 @@
 package user
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/BekzhanK1/wishly/config"
+	"github.com/BekzhanK1/wishly/internal/auth"
 	"github.com/gin-gonic/gin"
 )
 
@@ -76,7 +78,34 @@ func (h *Handler) Login(c *gin.Context) {
 		MaxAge:   config.RefreshTokenExpiryTime,
 		HttpOnly: true,
 		Secure:   true,
-		Path:     "/auth/refresh",
+		Path:     "/",
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	c.JSON(http.StatusOK, gin.H{"user": loginOutput.UserResponse})
+}
+
+func (h *Handler) RefreshAccessTokenHandler(c *gin.Context) {
+	refreshToken, err := auth.ExtractRefreshTokenFromRequest(c)
+	if err != nil {
+		log.Println("Error retrieving refresh token:", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token not found"})
+		return
+	}
+
+	loginOutput, err := h.service.RefreshAccessToken(refreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		return
+	}
+
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "access_token",
+		Value:    loginOutput.AccessToken,
+		MaxAge:   config.AccessTokenExpiryTime,
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
 		SameSite: http.SameSiteStrictMode,
 	})
 

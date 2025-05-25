@@ -9,6 +9,7 @@ type Service interface {
 	ValidateCredentials(LoginInput) (*LoginOutput, error)
 	Register(RegisterInput) (*UserResponse, error)
 	Me(uint) (*UserResponse, error)
+	RefreshAccessToken(string) (*LoginOutput, error)
 }
 
 type service struct {
@@ -32,6 +33,30 @@ func (s *service) ValidateCredentials(input LoginInput) (*LoginOutput, error) {
 	}
 
 	return toLoginResponse(user, accessToken, refreshToken), nil
+}
+
+func (s *service) RefreshAccessToken(refreshToken string) (*LoginOutput, error) {
+	token, err := auth.ParseRefreshToken(refreshToken)
+	if err != nil || !token.Valid {
+		return nil, ErrInvalidRefreshToken
+	}
+
+	userID, err := auth.ExtractUserID(token)
+	if err != nil {
+		return nil, ErrInvalidRefreshToken
+	}
+
+	user, err := s.repo.FindByID(userID)
+	if err != nil {
+		return nil, ErrInvalidRefreshToken
+	}
+
+	newAccessToken, err := auth.GenerateAccessToken(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return toRefreshResponse(user, newAccessToken), nil
 }
 
 func (s *service) Register(input RegisterInput) (*UserResponse, error) {
@@ -89,5 +114,16 @@ func toLoginResponse(u *User, accessToken string, refreshToken string) *LoginOut
 		},
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+	}
+}
+
+func toRefreshResponse(u *User, accessToken string) *LoginOutput {
+	return &LoginOutput{
+		UserResponse: UserResponse{
+			ID:       u.ID,
+			Username: u.Username,
+			Email:    u.Email,
+		},
+		AccessToken: accessToken,
 	}
 }

@@ -45,3 +45,12 @@ func extractTokenFromRequest(c *gin.Context) (string, error) {
 
 	return "", errors.New("missing access token")
 }
+
+func ExtractRefreshTokenFromRequest(c *gin.Context) (string, error) {
+	cookie, err := c.Cookie("refresh_token")
+	if err == nil && cookie != "" {
+		return cookie, nil
+	}
+
+	return "", errors.New("missing refresh token")
+}
