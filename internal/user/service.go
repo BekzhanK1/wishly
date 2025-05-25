@@ -18,13 +18,12 @@ type service struct {
 func (s *service) ValidateCredentials(input LoginInput) (*LoginOutput, error) {
 	user, err := s.repo.FindByEmail(input.Email)
 	if err != nil {
-		return nil, err
+		return nil, ErrUserNotFound
 	}
 
 	hashErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
 	if hashErr != nil {
-		return nil, hashErr
-
+		return nil, ErrInvalidCredentials
 	}
 
 	accessToken, refreshToken, err := auth.GenerateTokenPair(user.ID)
@@ -41,6 +40,10 @@ func (s *service) Register(input RegisterInput) (*UserResponse, error) {
 		return nil, err
 	}
 
+	if input.Username == "" || input.Email == "" || input.Password == "" {
+		return nil, ErrInvalidInput
+	}
+
 	user := &User{
 		Username: input.Username,
 		Email:    input.Email,
@@ -49,7 +52,7 @@ func (s *service) Register(input RegisterInput) (*UserResponse, error) {
 
 	err = s.repo.Create(user)
 	if err != nil {
-		return nil, err
+		return nil, ErrCouldntCreateUser
 	}
 
 	return ToUserResponse(user), err
@@ -59,7 +62,7 @@ func (s *service) Register(input RegisterInput) (*UserResponse, error) {
 func (s *service) Me(userID uint) (*UserResponse, error) {
 	user, err := s.repo.FindByID(userID)
 	if err != nil {
-		return nil, err
+		return nil, ErrUserNotFound
 	}
 
 	return ToUserResponse(user), nil

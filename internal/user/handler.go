@@ -52,7 +52,11 @@ func (h *Handler) Login(c *gin.Context) {
 
 	loginOutput, err := h.service.ValidateCredentials(input)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		if err == ErrUserNotFound || err == ErrInvalidCredentials {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+			return
+		}
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Failed to login"})
 		return
 	}
 

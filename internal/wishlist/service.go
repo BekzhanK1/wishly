@@ -1,8 +1,6 @@
 package wishlist
 
 import (
-	"fmt"
-
 	"github.com/BekzhanK1/wishly/internal/user"
 	"github.com/BekzhanK1/wishly/pkg/slug"
 )
@@ -28,7 +26,7 @@ func NewService(repo Repository) Service {
 
 func (s *service) CreateWishlist(input *CreateWishlistInput, userID uint) error {
 	if input == nil {
-		return fmt.Errorf("wishlist cannot be nil")
+		return ErrInvalidWishlistInput
 	}
 
 	slug := slug.GenerateUniqueSlug(input.Title, func(slug string) bool {
@@ -36,13 +34,16 @@ func (s *service) CreateWishlist(input *CreateWishlistInput, userID uint) error 
 	})
 
 	wishlist := &Wishlist{
-		Title:  input.Title,
-		Slug:   slug,
-		UserID: userID,
+		Title:       input.Title,
+		Description: input.Description,
+		ImageURL:    input.ImageURL,
+		IsPublic:    input.IsPublic,
+		Slug:        slug,
+		UserID:      userID,
 	}
 
 	if err := s.repo.Create(wishlist); err != nil {
-		return fmt.Errorf("failed to create wishlist: %w", err)
+		return ErrWishlistCreationFailed
 	}
 	return nil
 }
@@ -50,7 +51,7 @@ func (s *service) CreateWishlist(input *CreateWishlistInput, userID uint) error 
 func (s *service) GetWishlistByID(id uint) (*WishlistOutput, error) {
 	wishlist, err := s.repo.FindByID(id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find wishlist by ID %d: %w", id, err)
+		return nil, ErrWishlistNotFound
 	}
 
 	wishlistOutput := toOutput(wishlist)
@@ -61,8 +62,13 @@ func (s *service) GetWishlistByID(id uint) (*WishlistOutput, error) {
 func (s *service) GetWishlistByUsernameAndSlug(username string, slug string) (*WishlistOutputPublic, error) {
 	wishlist, user, err := s.repo.FindByUsernameAndSlug(username, slug)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find wishlist by username %s and slug %s: %w", username, slug, err)
+		return nil, ErrWishlistNotFound
 	}
+
+	if !wishlist.IsPublic {
+		return nil, ErrWishlistPublicAccessDenied
+	}
+
 	wishlistOutput := toOutputWithUser(wishlist, user)
 	return wishlistOutput, nil
 }
@@ -70,7 +76,7 @@ func (s *service) GetWishlistByUsernameAndSlug(username string, slug string) (*W
 func (s *service) GetWishlistBySlug(slug string) (*WishlistOutput, error) {
 	wishlist, err := s.repo.FindBySlug(slug)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find wishlist by slug %s: %w", slug, err)
+		return nil, ErrWishlistNotFound
 	}
 
 	wishlistOutput := toOutput(wishlist)
@@ -81,7 +87,7 @@ func (s *service) GetWishlistBySlug(slug string) (*WishlistOutput, error) {
 func (s *service) GetAllWishlistsByUser(userID uint) ([]*WishlistOutput, error) {
 	wishlists, err := s.repo.FindAllByUser(userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find wishlists for user ID %d: %w", userID, err)
+		return nil, ErrWishlistNotFound
 	}
 	wishlistOutputs := make([]*WishlistOutput, len(wishlists))
 	for i, wishlist := range wishlists {
@@ -92,7 +98,7 @@ func (s *service) GetAllWishlistsByUser(userID uint) ([]*WishlistOutput, error) 
 
 func (s *service) UpdateWishlist(w *Wishlist) error {
 	if w == nil {
-		return fmt.Errorf("wishlist cannot be nil")
+		return ErrInvalidWishlistInput
 	}
 
 	if s.repo.SlugExistsForUser(w.Slug, w.UserID) {
@@ -102,14 +108,14 @@ func (s *service) UpdateWishlist(w *Wishlist) error {
 	}
 
 	if err := s.repo.Update(w); err != nil {
-		return fmt.Errorf("failed to update wishlist: %w", err)
+		return ErrWishlistUpdateFailed
 	}
 	return nil
 }
 
 func (s *service) DeleteWishlist(id uint, userID uint) error {
 	if err := s.repo.Delete(id, userID); err != nil {
-		return fmt.Errorf("failed to delete wishlist with ID %d for user ID %d: %w", id, userID, err)
+		return ErrWishlistDeletionFailed
 	}
 	return nil
 }
@@ -120,23 +126,29 @@ func (s *service) IsSlugUsedByUser(slug string, userID uint) bool {
 
 func toOutput(w *Wishlist) *WishlistOutput {
 	return &WishlistOutput{
-		ID:        w.ID,
-		Title:     w.Title,
-		Slug:      w.Slug,
-		UserID:    w.UserID,
-		CreatedAt: w.CreatedAt,
-		UpdatedAt: w.UpdatedAt,
+		ID:          w.ID,
+		Title:       w.Title,
+		Description: w.Description,
+		ImageURL:    w.ImageURL,
+		Slug:        w.Slug,
+		IsPublic:    w.IsPublic,
+		UserID:      w.UserID,
+		CreatedAt:   w.CreatedAt,
+		UpdatedAt:   w.UpdatedAt,
 	}
 }
 
 func toOutputWithUser(w *Wishlist, u *user.User) *WishlistOutputPublic {
 	return &WishlistOutputPublic{
-		ID:           w.ID,
-		Title:        w.Title,
-		Slug:         w.Slug,
-		UserID:       w.UserID,
-		CreatedAt:    w.CreatedAt,
-		UpdatedAt:    w.UpdatedAt,
-		UserResponse: *user.ToUserResponse(u),
+		ID:          w.ID,
+		Title:       w.Title,
+		Description: w.Description,
+		ImageURL:    w.ImageURL,
+		Slug:        w.Slug,
+		IsPublic:    w.IsPublic,
+		UserID:      w.UserID,
+		CreatedAt:   w.CreatedAt,
+		UpdatedAt:   w.UpdatedAt,
+		User:        *user.ToUserResponse(u),
 	}
 }
